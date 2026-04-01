@@ -1,0 +1,41 @@
+{
+  "local": {
+    "project_root": "C:/Users/your_name/Desktop/yolo_pc_to_aipro",
+    "onnx_path": "C:/Users/your_name/Desktop/yolo_pc_to_aipro/pc_train/runs/learn/weights/best.onnx",
+    "pull_result_to": "C:/Users/your_name/Desktop/yolo_pc_to_aipro/result_from_board.jpg"
+  },
+  "pc": {
+    "python_exe": "python",
+    "train": {
+      "data": "coco8.yaml",
+      "model": "yolov8n.pt",
+      "imgsz": 640,
+      "epochs": 20,
+      "project": "runs",
+      "name": "learn",
+      "opset": 13,
+      "best_pt": ""
+    }
+  },
+  "board": {
+    "user": "HwHiAiUser",
+    "ip": "192.168.1.88",
+    "soc_version": "Ascend310B4",
+    "workdir": "/home/HwHiAiUser/yolo_pc_to_aipro",
+    "onnx_path": "/home/HwHiAiUser/best.onnx",
+    "om_path": "/home/HwHiAiUser/best.om",
+    "device_id": 0
+  },
+  "pipeline": {
+    "input_name": "images",
+    "input_shape": "1,3,640,640"
+  },
+  "inference": {
+    "image_path": "/home/HwHiAiUser/test.jpg",
+    "result_path": "/home/HwHiAiUser/result.jpg",
+    "imgsz": 640,
+    "conf": 0.18,
+    "iou": 0.50,
+    "classes": "0,1,2,3,5,7"
+  }
+}

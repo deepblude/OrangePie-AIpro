@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YOLO PC -> OrangePi AIpro 全流程复现手册</title>
+  <style>
+    :root {
+      --bg: #f2f6fb;
+      --panel: #ffffff;
+      --ink: #122033;
+      --muted: #42566f;
+      --line: #d8e2ee;
+      --brand: #0b4a7a;
+      --brand-soft: #e8f2fb;
+      --pc: #0f766e;
+      --pc-soft: #e6fffb;
+      --board: #7c2d12;
+      --board-soft: #fff2eb;
+      --warn: #b45309;
+      --ok: #166534;
+      --code-bg: #091522;
+      --code-ink: #e5edf7;
+      --radius: 16px;
+      --shadow: 0 14px 30px rgba(18, 32, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 0% 0%, #eaf3ff 0%, transparent 32%),
+        radial-gradient(circle at 100% 12%, #eefbf9 0%, transparent 30%),
+        var(--bg);
+      line-height: 1.65;
+    }
+
+    .wrap {
+      width: min(1200px, 94vw);
+      margin: 22px auto 40px;
+    }
+
+    .hero {
+      background: linear-gradient(140deg, #ffffff 0%, #f4f9ff 68%, #edf4fb 100%);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.65rem, 2.8vw, 2.45rem);
+      line-height: 1.22;
+    }
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .tag-row {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tag {
+      border-radius: 999px;
+      border: 1px solid #bfd3e9;
+      background: #edf5ff;
+      color: #0f3f68;
+      font-size: 0.84rem;
+      padding: 4px 10px;
+      font-weight: 700;
+    }
+
+    .progress-wrap {
+      margin-top: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #edf2f7;
+      border: 1px solid #cfdae7;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      transition: width .35s ease;
+      background: linear-gradient(90deg, #0ea5e9, #16a34a);
+    }
+    .progress-text {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .mode-panel {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .mode-btn {
+      border: 1px solid #9db1c6;
+      background: #fff;
+      color: #1b2f44;
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .mode-btn.active {
+      border-color: #0b4a7a;
+      background: #0b4a7a;
+      color: #fff;
+    }
+    .side-hint {
+      margin-left: auto;
+      border: 1px dashed #9eb4cc;
+      background: #f7fbff;
+      color: #26445e;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+    .card {
+      grid-column: span 12;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: var(--panel);
+      padding: 16px;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      color: #103b5f;
+      font-size: 1.2rem;
+    }
+    .card h3 {
+      margin: 12px 0 8px;
+      font-size: 1rem;
+      color: #1f3a56;
+    }
+
+    .step-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .step-no {
+      font-weight: 800;
+      color: #0b4a7a;
+      font-size: 1.02rem;
+    }
+    .side-badge {
+      border-radius: 999px;
+      padding: 2px 10px;
+      border: 1px solid transparent;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+    .side-pc {
+      color: var(--pc);
+      border-color: #6ee7d4;
+      background: var(--pc-soft);
+    }
+    .side-board {
+      color: var(--board);
+      border-color: #fdba74;
+      background: var(--board-soft);
+    }
+    .side-both {
+      color: #374151;
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .do {
+      margin: 8px 0;
+      padding: 8px 10px;
+      border-left: 4px solid #22c55e;
+      border-radius: 8px;
+      background: #f0fdf4;
+      color: #14532d;
+      font-size: 0.93rem;
+    }
+    .warn {
+      margin: 8px 0;
+      padding: 8px 10px;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      background: #fffbeb;
+      color: #7c2d12;
+      font-size: 0.93rem;
+    }
+
+    .cmd-wrap {
+      position: relative;
+      margin-top: 8px;
+    }
+    pre {
+      margin: 0;
+      border-radius: 12px;
+      border: 1px solid #2d3c4f;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 12px;
+      overflow-x: auto;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.9rem;
+      line-height: 1.52;
+      white-space: pre;
+    }
+    .copy-btn {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      border: 1px solid #90a4bb;
+      background: #f7fafc;
+      color: #15304a;
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .check-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.93rem;
+      color: #334b63;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+    }
+    th, td {
+      border: 1px solid #d7e2ee;
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #eef4fb;
+      color: #184366;
+    }
+
+    details {
+      border: 1px solid #d7e2ee;
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 10px;
+      margin: 8px 0;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #224666;
+    }
+
+    .json-box {
+      width: 100%;
+      min-height: 170px;
+      resize: vertical;
+      border: 1px solid #2b3f56;
+      border-radius: 10px;
+      background: #0b1422;
+      color: #e4edf7;
+      padding: 10px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .form {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .field {
+      display: grid;
+      gap: 4px;
+    }
+    .field label {
+      color: #3c536d;
+      font-size: 0.86rem;
+    }
+    .field input {
+      border: 1px solid #c7d5e4;
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 0.92rem;
+    }
+    .btn {
+      border: 1px solid #97adc4;
+      background: #f7fbff;
+      color: #173652;
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .footer {
+      margin-top: 12px;
+      text-align: center;
+      color: #48617b;
+      font-size: 0.9rem;
+    }
+
+    @media (min-width: 980px) {
+      .col-6 { grid-column: span 6; }
+      .col-4 { grid-column: span 4; }
+      .col-8 { grid-column: span 8; }
+      .col-12 { grid-column: span 12; }
+      .form {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>YOLO PC -> OrangePi AIpro 全流程复现手册（交互版）</h1>
+      <p class="sub">目标：让任何开发者从零开始，在你的项目上完整复现训练、导出、上传、ATC 转换、NPU 推理、结果回传。</p>
+      <div class="tag-row">
+        <span class="tag">保姆级命令</span>
+        <span class="tag">PC/Board 分离清晰</span>
+        <span class="tag">每步可勾选</span>
+        <span class="tag">常见报错速查</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="pbar"></div></div>
+      <p class="progress-text" id="ptxt">进度：0/8 步</p>
+      <div class="mode-panel">
+        <button class="mode-btn active" data-filter="all">显示全部</button>
+        <button class="mode-btn" data-filter="pc">只看 PC 命令</button>
+        <button class="mode-btn" data-filter="board">只看 Board 命令</button>
+        <div class="side-hint" id="sideHint">当前视图：全部步骤</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card col-12">
+        <h2>0) 执行端规则（必须先看）</h2>
+        <table>
+          <thead>
+            <tr><th>终端</th><th>提示符示例</th><th>可执行命令</th><th>常见误区</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PC 端（Windows PowerShell）</td>
+              <td><code>PS C:\Users\16113&gt;</code></td>
+              <td><code>powershell</code>、<code>scp</code>、<code>ssh</code>、<code>python</code></td>
+              <td>不能执行 <code>source ...set_env.sh</code>（那是 Linux 命令）</td>
+            </tr>
+            <tr>
+              <td>Board 端（OrangePi Linux）</td>
+              <td><code>(base) HwHiAiUser@orangepiaipro:~$</code></td>
+              <td><code>bash</code>、<code>source</code>、<code>python3</code>、<code>atc</code></td>
+              <td>不能执行 Windows 路径和 PowerShell 命令</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="warn">`password:` 输入时不显示字符是正常现象，直接输入并回车。</p>
+      </article>
+
+      <article class="card col-12 step" data-side="pc">
+        <div class="step-head">
+          <span class="step-no">1) PC 初始化 Python 环境</span>
+          <span class="side-badge side-pc">PC 端执行</span>
+        </div>
+        <p>作用：确保本机具备 `ultralytics`、`onnx` 等依赖，避免 `ModuleNotFoundError`。</p>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd1">复制</button>
+          <pre id="cmd1"><code>cd C:\Users\16113\Desktop\yolo_pc_to_aipro\pc_train
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install -r requirements.txt</code></pre>
+        </div>
+        <div class="do">预期：安装成功，无红色报错。</div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="1"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="pc">
+        <div class="step-head">
+          <span class="step-no">2) PC 训练并导出 ONNX（opset=13）</span>
+          <span class="side-badge side-pc">PC 端执行</span>
+        </div>
+        <p>作用：生成 `best.pt` 与 `best.onnx`。你当前 CANN 场景建议使用 `opset=13`。</p>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd2">复制</button>
+          <pre id="cmd2"><code>cd C:\Users\16113\Desktop\yolo_pc_to_aipro\pc_train
+.\.venv\Scripts\Activate.ps1
+python train_and_export.py --data coco8.yaml --model yolov8n.pt --imgsz 640 --epochs 20 --project runs --name learn --opset 13</code></pre>
+        </div>
+        <div class="do">产物：`pc_train\runs\detect\runs\learn\weights\best.onnx`</div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="2"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="pc">
+        <div class="step-head">
+          <span class="step-no">3) PC 一键执行工程脚本（推荐）</span>
+          <span class="side-badge side-pc">PC 端执行</span>
+        </div>
+        <p>作用：自动串联上传、同步板端脚本、ATC 转换、板端推理、结果拉回。</p>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd3">复制</button>
+          <pre id="cmd3"><code>cd C:\Users\16113\Desktop\yolo_pc_to_aipro
+powershell -ExecutionPolicy Bypass -File .\scripts\run_end2end.ps1 -SkipExport</code></pre>
+        </div>
+        <p class="warn">如果你要从训练开始全自动，去掉 `-SkipExport`。</p>
+        <div class="do">成功标志：最后出现 `Saved: C:/Users/16113/Desktop/yolo_pc_to_aipro/result_from_board.jpg`</div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="3"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="pc">
+        <div class="step-head">
+          <span class="step-no">4) PC 分步执行（排障专用）</span>
+          <span class="side-badge side-pc">PC 端执行</span>
+        </div>
+        <p>当一键流程中断时，用下面命令定位具体失败环节：</p>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd4">复制</button>
+          <pre id="cmd4"><code>cd C:\Users\16113\Desktop\yolo_pc_to_aipro
+powershell -ExecutionPolicy Bypass -File .\scripts\pc_upload_onnx.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\pc_sync_board_scripts.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\pc_remote_convert.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\pc_remote_infer.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\pc_pull_result.ps1</code></pre>
+        </div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="4"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="board">
+        <div class="step-head">
+          <span class="step-no">5) Board 手动转换 ONNX -> OM（用于验证 ATC）</span>
+          <span class="side-badge side-board">Board 端执行</span>
+        </div>
+        <p>作用：验证板端 CANN/ATC 环境本身没问题。</p>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd5">复制</button>
+          <pre id="cmd5"><code>cd /home/HwHiAiUser
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python3 -c "import tbe; print(tbe.__file__)"
+bash /home/HwHiAiUser/yolo_pc_to_aipro/board_convert/convert_to_om.sh \
+  /home/HwHiAiUser/best.onnx Ascend310B4 images 1,3,640,640 /home/HwHiAiUser/best
+ls -lh /home/HwHiAiUser/best.om</code></pre>
+        </div>
+        <div class="do">成功标志：能看到 `/home/HwHiAiUser/best.om`，且大小约几 MB。</div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="5"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="board">
+        <div class="step-head">
+          <span class="step-no">6) Board 真实图片推理</span>
+          <span class="side-badge side-board">Board 端执行</span>
+        </div>
+        <p>作用：在 NPU 上运行 `best.om`，输出可视化结果图 `result.jpg`。</p>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd6">复制</button>
+          <pre id="cmd6"><code>bash /home/HwHiAiUser/yolo_pc_to_aipro/board_deploy/run_infer.sh \
+  --model /home/HwHiAiUser/best.om \
+  --image /home/HwHiAiUser/test.jpg \
+  --output /home/HwHiAiUser/result.jpg \
+  --device 0 \
+  --imgsz 640 \
+  --conf 0.18 \
+  --iou 0.50 \
+  --classes 0,1,2,3,5,7
+ls -lh /home/HwHiAiUser/result.jpg</code></pre>
+        </div>
+        <div class="do">成功标志：日志里出现 `detections: N`，并且 `result.jpg` 存在。</div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="6"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="pc">
+        <div class="step-head">
+          <span class="step-no">7) PC 拉回推理结果</span>
+          <span class="side-badge side-pc">PC 端执行</span>
+        </div>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd7">复制</button>
+          <pre id="cmd7"><code>cd C:\Users\16113\Desktop\yolo_pc_to_aipro
+powershell -ExecutionPolicy Bypass -File .\scripts\pc_pull_result.ps1</code></pre>
+        </div>
+        <div class="do">成功标志：生成 `C:\Users\16113\Desktop\yolo_pc_to_aipro\result_from_board.jpg`</div>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="7"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-12 step" data-side="pc">
+        <div class="step-head">
+          <span class="step-no">8) 结项验收（交付给其他开发者前必做）</span>
+          <span class="side-badge side-pc">PC 端执行</span>
+        </div>
+        <div class="cmd-wrap">
+          <button class="copy-btn" data-copy="cmd8">复制</button>
+          <pre id="cmd8"><code>dir C:\Users\16113\Desktop\yolo_pc_to_aipro\result_from_board.jpg
+type C:\Users\16113\Desktop\yolo_pc_to_aipro\project_config.json
+type C:\Users\16113\Desktop\yolo_pc_to_aipro\README.md</code></pre>
+        </div>
+        <p class="do">通过标准：配置文件齐全、流程文档齐全、结果图可打开、命令可重复执行。</p>
+        <label class="check-row"><input type="checkbox" class="step-check" data-step="8"> 我已完成这一步</label>
+      </article>
+
+      <article class="card col-8">
+        <h2>项目文件作用总表</h2>
+        <table>
+          <thead>
+            <tr><th>文件</th><th>作用</th><th>在哪执行</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>project_config.json</code></td><td>全局配置中心（IP、路径、SOC、阈值）</td><td>PC 编辑</td></tr>
+            <tr><td><code>pc_train/train_and_export.py</code></td><td>训练 + 导出 ONNX，支持 `--opset`、`--best-pt`</td><td>PC 执行</td></tr>
+            <tr><td><code>scripts/run_end2end.ps1</code></td><td>端到端一键流程入口</td><td>PC 执行</td></tr>
+            <tr><td><code>scripts/pc_upload_onnx.ps1</code></td><td>上传 ONNX 到板端</td><td>PC 执行</td></tr>
+            <tr><td><code>scripts/pc_sync_board_scripts.ps1</code></td><td>同步板端脚本和目录</td><td>PC 执行</td></tr>
+            <tr><td><code>scripts/pc_remote_convert.ps1</code></td><td>远程触发 ONNX->OM 转换</td><td>PC 触发 Board</td></tr>
+            <tr><td><code>scripts/pc_remote_infer.ps1</code></td><td>远程触发板端真实图片推理</td><td>PC 触发 Board</td></tr>
+            <tr><td><code>scripts/pc_pull_result.ps1</code></td><td>把板端 result.jpg 拉回本机</td><td>PC 执行</td></tr>
+            <tr><td><code>board_convert/convert_to_om.sh</code></td><td>ATC 转换脚本（含 tbe 预检查）</td><td>Board 执行</td></tr>
+            <tr><td><code>board_deploy/run_infer.sh</code></td><td>板端推理入口（调用 infer_image.py）</td><td>Board 执行</td></tr>
+            <tr><td><code>board_deploy/infer_image.py</code></td><td>预处理、NPU 推理、后处理、保存结果图</td><td>Board 执行</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card col-12">
+        <h2>Python 源码讲解（复现同时学原理）</h2>
+        <p>下面这部分不是“怎么敲命令”，而是“为什么命令背后的 Python 要这样写”。建议打开源码边看边对照。</p>
+
+        <h3>A) 训练导出脚本：<code>pc_train/train_and_export.py</code></h3>
+        <details open>
+          <summary>调用链（点开看全局结构）</summary>
+          <pre><code>main()
+ ├─ parse_args()              # 解析 data/model/imgsz/epochs/opset 等参数
+ ├─ train_if_needed(args)     # 训练或直接读取已有 best.pt
+ │   └─ resolve_best_pt(...)  # 自动定位 best.pt，避免路径差异导致失败
+ └─ export_model.export(...)  # 导出 ONNX，固定 opset=13</code></pre>
+        </details>
+        <details>
+          <summary>重点1：为什么要单独做 <code>resolve_best_pt</code>？</summary>
+          <p>Ultralytics 在不同版本、不同 project/name 下，权重输出路径可能变化。脚本通过多级回退寻找 `best.pt`，把“手工找路径”变成自动化，工程更稳定。</p>
+        </details>
+        <details>
+          <summary>重点2：为什么强调 <code>opset=13</code>？</summary>
+          <p>这是你当前 Ascend+CANN 环境下的兼容优先值。opset 过高时，ATC 常出现算子不支持或解析失败。工程上优先“稳定可编译”。</p>
+        </details>
+
+        <h3>B) 板端推理脚本：<code>board_deploy/infer_image.py</code></h3>
+        <details open>
+          <summary>从图片到结果图的完整数据流</summary>
+          <pre><code>main()
+ ├─ preprocess(image, imgsz)
+ │   ├─ resize 到 640x640
+ │   ├─ BGR -> RGB
+ │   ├─ float32 + 归一化到 [0,1]
+ │   └─ HWC -> CHW -> NCHW
+ ├─ session = InferSession(device_id, om_path)
+ ├─ pred_raw = session.infer([inp], mode="static")[0]
+ ├─ pred = decode_output(pred_raw)      # 统一输出形状
+ ├─ detections = postprocess(...)       # 阈值筛选 + NMS
+ ├─ draw_boxes(...)
+ └─ session.free_resource()             # 释放 ACL/NPU 资源</code></pre>
+        </details>
+        <details>
+          <summary>重点3：为什么输入必须转成 NCHW？</summary>
+          <p>OpenCV 读图默认是 HWC，而模型输入通常是 NCHW。若不转置，通道顺序会错，推理结果会明显异常或完全不可用。</p>
+        </details>
+        <details>
+          <summary>重点4：为什么输出形状会是 <code>(1,84,8400)</code> 或 <code>(1,8400,84)</code>？</summary>
+          <p>84 = 4个框参数 + 80个类别分数；8400 是候选位置总数。`decode_output` 做的事就是把不同布局统一成同一种后处理格式。</p>
+        </details>
+        <details>
+          <summary>重点5：NMS 在干什么？</summary>
+          <p>模型会给同一目标吐出多个重叠框。NMS 会在重叠框里保留高分框，抑制低分重复框，让结果更干净。</p>
+        </details>
+        <details>
+          <summary>重点6：为什么一定要 <code>session.free_resource()</code>？</summary>
+          <p>Ascend 设备上下文和显存资源不是 Python 垃圾回收能及时处理的。显式释放可避免下次运行出现设备占用或初始化失败。</p>
+        </details>
+
+        <h3>C) 底层知识速览（给复现者建立全局心智）</h3>
+        <table>
+          <thead>
+            <tr><th>层</th><th>项目里对应产物</th><th>本质</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>训练层</td><td><code>best.pt</code></td><td>PyTorch 权重，只能由训练框架直接理解</td></tr>
+            <tr><td>中间表示层</td><td><code>best.onnx</code></td><td>跨框架计算图交换格式</td></tr>
+            <tr><td>编译层</td><td><code>best.om</code></td><td>ATC 面向具体 Ascend SoC 的离线编译产物</td></tr>
+            <tr><td>运行时层</td><td><code>InferSession/ACL</code></td><td>设备初始化、模型加载、执行与资源释放</td></tr>
+            <tr><td>应用层</td><td><code>result.jpg</code></td><td>后处理将张量输出变为可视化业务结果</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card col-4">
+        <h2>配置生成器（project_config 片段）</h2>
+        <div class="form">
+          <div class="field">
+            <label for="ip">Board IP</label>
+            <input id="ip" value="192.168.137.100" />
+          </div>
+          <div class="field">
+            <label for="user">Board User</label>
+            <input id="user" value="HwHiAiUser" />
+          </div>
+          <div class="field">
+            <label for="soc">SOC Version</label>
+            <input id="soc" value="Ascend310B4" />
+          </div>
+          <div class="field">
+            <label for="img">Board Image Path</label>
+            <input id="img" value="/home/HwHiAiUser/test.jpg" />
+          </div>
+        </div>
+        <p style="margin:10px 0 6px;">
+          <button class="btn" id="btnGen">生成 JSON 片段</button>
+          <button class="btn" id="btnCopyJson">复制</button>
+        </p>
+        <textarea class="json-box" id="jsonOut" spellcheck="false"></textarea>
+      </article>
+
+      <article class="card col-12">
+        <h2>常见错误与处理（本项目实战版）</h2>
+        <details>
+          <summary>`ModuleNotFoundError: No module named 'ultralytics'`（PC）</summary>
+          <p>原因：没有在 `pc_train` 虚拟环境安装依赖。执行步骤 1 后重试。</p>
+        </details>
+        <details>
+          <summary>`source: command not found`（PC）</summary>
+          <p>原因：把 Linux 命令放到 Windows PowerShell 执行了。`source` 只能在板端 Bash 执行。</p>
+        </details>
+        <details>
+          <summary>`No module named 'tbe'`（Board ATC）</summary>
+          <p>先执行：`source /usr/local/Ascend/ascend-toolkit/set_env.sh && python3 -c "import tbe"`。若失败则检查 CANN 安装与 Python 环境。</p>
+        </details>
+        <details>
+          <summary>`ais_bench: command not found`（Board）</summary>
+          <p>可以使用 `python3 -m ais_bench`，或者直接用本项目 `run_infer.sh` + `infer_image.py` 路线。</p>
+        </details>
+        <details>
+          <summary>输入密码后“没反应”</summary>
+          <p>ATC 编译可能耗时几十秒到几分钟。开第二个 SSH 窗口检查：`ps -ef | grep atc | grep -v grep`。</p>
+        </details>
+      </article>
+    </section>
+
+    <p class="footer">结项建议：把本页面和 README.md 一起交付，其他开发者可按步骤完整复现。</p>
+  </main>
+
+  <script>
+    const checks = Array.from(document.querySelectorAll('.step-check'));
+    const pbar = document.getElementById('pbar');
+    const ptxt = document.getElementById('ptxt');
+    const modeBtns = Array.from(document.querySelectorAll('.mode-btn'));
+    const sideHint = document.getElementById('sideHint');
+    const steps = Array.from(document.querySelectorAll('.step'));
+    const storageKey = 'yolo_aipro_step_checks_v2';
+
+    function updateProgress() {
+      const done = checks.filter(c => c.checked).length;
+      const total = checks.length;
+      const pct = total ? (done / total) * 100 : 0;
+      pbar.style.width = pct + '%';
+      ptxt.textContent = `进度：${done}/${total} 步`;
+    }
+
+    function saveChecks() {
+      const v = {};
+      checks.forEach(c => { v[c.dataset.step] = c.checked; });
+      localStorage.setItem(storageKey, JSON.stringify(v));
+      updateProgress();
+    }
+
+    function loadChecks() {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) { updateProgress(); return; }
+      try {
+        const v = JSON.parse(raw);
+        checks.forEach(c => {
+          if (Object.prototype.hasOwnProperty.call(v, c.dataset.step)) {
+            c.checked = !!v[c.dataset.step];
+          }
+        });
+      } catch (_) {}
+      updateProgress();
+    }
+
+    checks.forEach(c => c.addEventListener('change', saveChecks));
+
+    function setFilter(filter) {
+      modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
+      steps.forEach(s => {
+        if (filter === 'all') {
+          s.style.display = '';
+          return;
+        }
+        s.style.display = s.dataset.side === filter ? '' : 'none';
+      });
+      sideHint.textContent = filter === 'all'
+        ? '当前视图：全部步骤'
+        : (filter === 'pc' ? '当前视图：仅 PC 命令（Windows PowerShell）' : '当前视图：仅 Board 命令（Linux Bash）');
+    }
+    modeBtns.forEach(btn => btn.addEventListener('click', () => setFilter(btn.dataset.filter)));
+
+    async function copyText(id, btn) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = el.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        const old = btn.textContent;
+        btn.textContent = '已复制';
+        setTimeout(() => { btn.textContent = old; }, 1000);
+      } catch (_) {
+        window.getSelection().removeAllRanges();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        window.getSelection().addRange(range);
+      }
+    }
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => copyText(btn.dataset.copy, btn));
+    });
+
+    const ip = document.getElementById('ip');
+    const user = document.getElementById('user');
+    const soc = document.getElementById('soc');
+    const img = document.getElementById('img');
+    const out = document.getElementById('jsonOut');
+
+    function buildJson() {
+      const obj = {
+        board: {
+          user: user.value.trim(),
+          ip: ip.value.trim(),
+          soc_version: soc.value.trim(),
+          onnx_path: '/home/HwHiAiUser/best.onnx',
+          om_path: '/home/HwHiAiUser/best.om',
+          workdir: '/home/HwHiAiUser/yolo_pc_to_aipro',
+          device_id: 0
+        },
+        inference: {
+          image_path: img.value.trim(),
+          result_path: '/home/HwHiAiUser/result.jpg',
+          imgsz: 640,
+          conf: 0.18,
+          iou: 0.5,
+          classes: '0,1,2,3,5,7'
+        },
+        pipeline: {
+          input_name: 'images',
+          input_shape: '1,3,640,640'
+        }
+      };
+      out.value = JSON.stringify(obj, null, 2);
+    }
+
+    document.getElementById('btnGen').addEventListener('click', buildJson);
+    document.getElementById('btnCopyJson').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(out.value); } catch (_) {}
+    });
+
+    buildJson();
+    loadChecks();
+    setFilter('all');
+  </script>
+</body>
+</html>

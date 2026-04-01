@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+pc_train/.venv/
+
+# IDE files
+.idea/
+pc_train/.idea/
+.vscode/
+
+# Training and generated artifacts
+pc_train/runs/
+pc_train/datasets/
+*.om
+*.onnx
+*.bin
+
+# OS files
+.DS_Store
+Thumbs.db
